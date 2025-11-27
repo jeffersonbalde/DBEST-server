@@ -15,21 +15,47 @@ return [
     |
     */
 
-    'paths' => ['api/*', 'sanctum/csrf-cookie'],
+    'paths' => [
+        'api/*',
+        'auth/*',
+        'sanctum/csrf-cookie',
+        'login',
+        'logout',
+        'register',
+        'user',
+        'admin/*',
+        'notifications/*',
+        'incidents/*',
+        'reports/*',
+        'analytics/*',
+        'population/*'
+    ],
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:5173', 'http://localhost:3000', 'https://dbest-client-cobe7.ondigitalocean.app'],
+    'allowed_origins' => [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'https://dbest-client-cobe7.ondigitalocean.app',
+        'https://dbest-client-cobe7.ondigitalocean.app/',
+    ],
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => [
+        '#^https://dbest-client-.*\.ondigitalocean\.app$#',
+    ],
 
     'allowed_headers' => ['*'],
 
-    'exposed_headers' => [],
+    'exposed_headers' => [
+        'Authorization',
+        'X-Requested-With',
+        'Content-Type',
+        'X-Token-Auth',
+        'X-CSRF-TOKEN',
+    ],
 
-    'max_age' => 0,
+    'max_age' => 86400, // 24 hours
 
     'supports_credentials' => true,
 
 ];
-
