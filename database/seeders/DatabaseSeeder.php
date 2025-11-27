@@ -37,5 +37,12 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ]
         );
+
+        // Seed ICT menu items
+        $this->call([
+            SchoolSeeder::class,           // Seed schools first
+            PropertyCustodianSeeder::class, // Then property custodians (depends on schools)
+            AccountingSeeder::class,       // Finally accounting users
+        ]);
     }
 }

@@ -15,12 +15,14 @@ class Accounting extends Authenticatable
 
     protected $fillable = [
         'employee_id',
+        'username',
         'first_name',
         'last_name',
         'email',
         'password',
         'phone',
         'position',
+        'avatar_path',
         'is_active',
     ];
 

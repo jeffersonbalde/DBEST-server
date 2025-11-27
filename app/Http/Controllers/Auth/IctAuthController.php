@@ -82,5 +82,42 @@ class IctAuthController extends Controller
     {
         return response()->json($request->user());
     }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
+
+        /** @var \App\Models\Ict $user */
+        $user = $request->user();
+
+        if (!$user || !$user instanceof Ict) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Unable to verify ICT administrator account.'],
+            ]);
+        }
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Your current password is incorrect.'],
+            ]);
+        }
+
+        if (Hash::check($request->new_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'new_password' => ['New password must be different from the current password.'],
+            ]);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return response()->json([
+            'message' => 'ICT administrator password updated successfully.',
+        ]);
+    }
 }
 

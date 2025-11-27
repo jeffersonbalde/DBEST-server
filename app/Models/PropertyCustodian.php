@@ -15,12 +15,15 @@ class PropertyCustodian extends Authenticatable
 
     protected $fillable = [
         'employee_id',
+        'username',
         'first_name',
         'last_name',
         'email',
         'password',
         'phone',
         'position',
+        'avatar_path',
+        'school_id',
         'is_active',
     ];
 
@@ -41,6 +44,11 @@ class PropertyCustodian extends Authenticatable
     public function getFullNameAttribute()
     {
         return "{$this->first_name} {$this->last_name}";
+    }
+
+    public function school()
+    {
+        return $this->belongsTo(School::class);
     }
 
     public function assignedItems()

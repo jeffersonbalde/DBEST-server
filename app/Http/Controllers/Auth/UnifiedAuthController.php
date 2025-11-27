@@ -29,7 +29,19 @@ class UnifiedAuthController extends Controller
 
         // Try to find user in each table
         foreach ($userTypes as $userType => $modelClass) {
-            $user = $modelClass::where('employee_id', $request->username)->first();
+            $model = new $modelClass;
+            $query = $modelClass::query();
+
+            if (in_array('username', $model->getFillable())) {
+                $query->where(function ($q) use ($request) {
+                    $q->where('username', $request->username)
+                      ->orWhere('employee_id', $request->username);
+                });
+            } else {
+                $query->where('employee_id', $request->username);
+            }
+
+            $user = $query->first();
 
             if ($user && Hash::check($request->password, $user->password)) {
                 if (!$user->is_active) {

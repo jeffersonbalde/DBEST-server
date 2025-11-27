@@ -23,6 +23,7 @@ class Backup extends Model
     protected function casts(): array
     {
         return [
+            'file_size' => 'integer',
             'restored_at' => 'datetime',
         ];
     }
