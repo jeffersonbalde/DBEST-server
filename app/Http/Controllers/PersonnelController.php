@@ -92,16 +92,10 @@ class PersonnelController extends Controller
         if ($id === 'me') {
             $user = $request->user();
             
-            // If user is a Personnel model, return it directly
+            // User should be a Personnel model
             if ($user instanceof Personnel) {
                 $personnel = Personnel::with(['assignedItems.inventoryItem'])->findOrFail($user->id);
-                return response()->json($this->transformPersonnel($personnel));
-            }
-            
-            // If user is a Teacher, try to find their linked Personnel record
-            if (method_exists($user, 'personnel') && $user->personnel) {
-                $personnel = Personnel::with(['assignedItems.inventoryItem'])->findOrFail($user->personnel->id);
-                return response()->json($this->transformPersonnel($personnel));
+                return response()->json(['personnel' => $this->transformPersonnel($personnel)]);
             }
             
             return response()->json(['message' => 'Personnel record not found'], 404);
@@ -113,22 +107,29 @@ class PersonnelController extends Controller
 
     public function update(Request $request, $id)
     {
+        // Debug: Log raw request data
+        \Log::info('Update request received', [
+            'method' => $request->method(),
+            'content_type' => $request->header('Content-Type'),
+            'all_data' => $request->all(),
+            'input_data' => $request->input(),
+            'has_file' => $request->hasFile('avatar'),
+        ]);
+        
         // Handle "me" route for authenticated Personnel users
         if ($id === 'me') {
             $user = $request->user();
             
-            // If user is a Personnel model, use it directly
+            // User should be a Personnel model
             if ($user instanceof Personnel) {
                 $personnel = Personnel::findOrFail($user->id);
-            } 
-            // If user is a Teacher, try to find their linked Personnel record
-            elseif (method_exists($user, 'personnel') && $user->personnel) {
-                $personnel = Personnel::findOrFail($user->personnel->id);
+                $personnelId = $personnel->id;
             } else {
                 return response()->json(['message' => 'Personnel record not found'], 404);
             }
         } else {
             $personnel = Personnel::findOrFail($id);
+            $personnelId = $personnel->id;
         }
 
         $validated = $request->validate([
@@ -136,13 +137,13 @@ class PersonnelController extends Controller
                 'sometimes',
                 'string',
                 'max:50',
-                Rule::unique('personnel', 'employee_id')->ignore($id),
+                Rule::unique('personnel', 'employee_id')->ignore($personnelId),
             ],
             'id_number' => [
                 'sometimes',
                 'string',
                 'max:50',
-                Rule::unique('personnel', 'id_number')->ignore($id),
+                Rule::unique('personnel', 'id_number')->ignore($personnelId),
             ],
             'username' => [
                 'sometimes',
@@ -152,7 +153,7 @@ class PersonnelController extends Controller
                     ['personnel', 'property_custodians', 'accountings'],
                     'username',
                     'personnel',
-                    (int) $id
+                    $personnelId
                 ),
             ],
             'first_name' => 'sometimes|string|max:120',
@@ -162,42 +163,102 @@ class PersonnelController extends Controller
                 'nullable',
                 'email',
                 'max:255',
-                Rule::unique('personnel', 'email')->ignore($id),
+                Rule::unique('personnel', 'email')->ignore($personnelId),
             ],
-            'phone' => 'nullable|string|max:20',
-            'department' => 'nullable|string|max:120',
-            'position' => 'nullable|string|max:120',
-            'subject_area' => 'nullable|string|max:120',
-            'employment_status' => 'sometimes|string|max:120',
-            'employment_level' => 'sometimes|string|max:120',
-            'rating' => 'nullable|string|max:50',
-            'notes' => 'nullable|string',
-            'type' => 'nullable|in:teacher,staff,admin',
+            'phone' => 'sometimes|nullable|string|max:20',
+            'department' => 'sometimes|nullable|string|max:120',
+            'position' => 'sometimes|nullable|string|max:120',
+            'subject_area' => 'sometimes|nullable|string|max:120',
+            'employment_status' => 'sometimes|nullable|string|max:120',
+            'employment_level' => 'sometimes|nullable|string|max:120',
+            'rating' => 'sometimes|nullable|string|max:50',
+            'notes' => 'sometimes|nullable|string',
+            'type' => 'sometimes|nullable|in:teacher,staff,admin',
             'is_active' => 'sometimes|boolean',
             'password' => 'nullable|string|min:6|confirmed',
             'avatar' => 'nullable|image|max:2048',
             'remove_avatar' => 'nullable|boolean',
         ]);
+        
+        // Filter out empty strings and convert them to null for nullable fields
+        $updateData = [];
+        foreach ($validated as $key => $value) {
+            // Skip fields that shouldn't be updated
+            if (in_array($key, ['employee_id', 'id_number', 'username', 'password', 'avatar', 'remove_avatar'])) {
+                if ($key === 'remove_avatar' || $key === 'avatar') {
+                    // Keep these special fields
+                    if (isset($validated[$key])) {
+                        $updateData[$key] = $validated[$key];
+                    }
+                }
+                continue;
+            }
+            
+            // Convert empty strings to null for nullable fields
+            if ($value === '' || $value === null) {
+                $updateData[$key] = null;
+            } else {
+                $updateData[$key] = $value;
+            }
+        }
 
         if ($request->boolean('remove_avatar') && $personnel->avatar_path) {
             Storage::disk('public')->delete($personnel->avatar_path);
-            $personnel->avatar_path = null;
+            $updateData['avatar_path'] = null;
         }
 
         if ($request->hasFile('avatar')) {
             if ($personnel->avatar_path) {
                 Storage::disk('public')->delete($personnel->avatar_path);
             }
-            $validated['avatar_path'] = $request->file('avatar')->store('personnel-avatars', 'public');
+            $updateData['avatar_path'] = $request->file('avatar')->store('personnel-avatars', 'public');
         }
 
         if (isset($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
+            $updateData['password'] = Hash::make($validated['password']);
         }
 
-        $personnel->update($validated);
+        // Debug: Log what we're updating
+        \Log::info('Updating personnel', [
+            'personnel_id' => $personnel->id,
+            'update_data' => $updateData,
+            'validated' => $validated,
+            'request_all' => $request->all(),
+        ]);
+        
+        // Only update if there's data to update
+        if (!empty($updateData)) {
+            $result = $personnel->update($updateData);
+            \Log::info('Personnel update result', [
+                'personnel_id' => $personnel->id,
+                'result' => $result,
+                'updated_data' => $updateData,
+            ]);
+            
+            // Force refresh from database
+            $personnel->refresh();
+            \Log::info('Personnel after refresh', [
+                'personnel_id' => $personnel->id,
+                'first_name' => $personnel->first_name,
+                'last_name' => $personnel->last_name,
+                'phone' => $personnel->phone,
+            ]);
+        } else {
+            \Log::warning('No data to update', [
+                'personnel_id' => $personnel->id,
+                'validated' => $validated,
+            ]);
+        }
 
-        return response()->json($this->transformPersonnel($personnel->fresh()));
+        // Reload the model with relationships to ensure we have the latest data
+        $personnel->load(['assignedItems.inventoryItem']);
+
+        // Return in consistent format for 'me' route
+        if ($id === 'me') {
+            return response()->json(['personnel' => $this->transformPersonnel($personnel)]);
+        }
+        
+        return response()->json($this->transformPersonnel($personnel));
     }
 
     public function destroy($id)

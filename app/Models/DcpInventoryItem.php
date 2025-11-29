@@ -23,8 +23,6 @@ class DcpInventoryItem extends Model
         'quantity',
         'property_no',
         'personnel_id',
-        'personnel_name',
-        'personnel_position',
         'condition_status',
         'last_checked_at',
         'validation_status',

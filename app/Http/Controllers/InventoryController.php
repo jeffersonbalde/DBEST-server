@@ -62,6 +62,7 @@ class InventoryController extends Controller
             'supplier' => 'nullable|string',
             'notes' => 'nullable|string',
             'asset_image' => 'nullable|image|max:2048',
+            'personnel_id' => 'nullable|exists:personnel,id',
         ]);
 
         // Ensure non-null fields that have DB defaults are not saved as NULL
@@ -122,6 +123,7 @@ class InventoryController extends Controller
             'notes' => 'nullable|string',
             'asset_image' => 'nullable|image|max:2048',
             'remove_image' => 'nullable|boolean',
+            'personnel_id' => 'nullable|exists:personnel,id',
         ]);
 
         if ($request->boolean('remove_image') && $item->image_path) {
@@ -163,5 +165,79 @@ class InventoryController extends Controller
         $item->delete();
 
         return response()->json(['message' => 'Item deleted successfully']);
+    }
+
+    public function generateICS(Request $request, $id)
+    {
+        $item = InventoryItem::with(['categoryRelation'])->findOrFail($id);
+        $user = $request->user();
+        
+        $validated = $request->validate([
+            'fund_cluster' => 'required|string|max:255',
+            'ics_number' => 'nullable|string|max:255',
+            'estimated_useful_life' => 'required|string|max:255',
+            'received_by_name' => 'required|string|max:255',
+            'received_by_position' => 'nullable|string|max:255',
+            'received_from_name' => 'required|string|max:255',
+            'received_from_position' => 'required|string|max:255',
+            'date' => 'required|date',
+        ]);
+
+        // Generate ICS number if not provided
+        if (empty($validated['ics_number'])) {
+            $now = now();
+            $random = str_pad(rand(0, 999), 3, '0', STR_PAD_LEFT);
+            $validated['ics_number'] = sprintf(
+                'SPL-ICS-LV-%s-%s-%s',
+                $now->format('Y'),
+                $now->format('m'),
+                $random
+            );
+        }
+
+        // Get personnel if assigned
+        $personnel = null;
+        if ($item->personnel_id) {
+            $personnel = \App\Models\Personnel::find($item->personnel_id);
+        }
+
+        // Get school info
+        $school = null;
+        if ($user->school_id) {
+            $school = \App\Models\School::find($user->school_id);
+        }
+
+        // Use DomPDF or similar for PDF generation
+        // For now, we'll return JSON and let frontend handle PDF generation
+        // Or we can use a package like barryvdh/laravel-dompdf
+        
+        return response()->json([
+            'ics_data' => [
+                'ics_number' => $validated['ics_number'],
+                'fund_cluster' => $validated['fund_cluster'],
+                'estimated_useful_life' => $validated['estimated_useful_life'],
+                'item' => [
+                    'item_code' => $item->item_code,
+                    'name' => $item->name,
+                    'description' => $item->description,
+                    'quantity' => $item->quantity,
+                    'unit' => $item->unit_of_measure,
+                    'unit_cost' => $item->unit_price,
+                    'total_cost' => $item->quantity * $item->unit_price,
+                ],
+                'personnel' => $personnel ? [
+                    'name' => $validated['received_by_name'],
+                    'position' => $validated['received_by_position'],
+                ] : null,
+                'school' => $school ? [
+                    'name' => $school->name,
+                ] : null,
+                'received_from' => [
+                    'name' => $validated['received_from_name'],
+                    'position' => $validated['received_from_position'],
+                ],
+                'date' => $validated['date'],
+            ],
+        ]);
     }
 }

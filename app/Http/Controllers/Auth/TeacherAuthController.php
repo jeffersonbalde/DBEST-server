@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Teacher;
+use App\Models\Personnel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -83,6 +84,44 @@ class TeacherAuthController extends Controller
     public function user(Request $request)
     {
         return response()->json($request->user());
+    }
+
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
+
+        /** @var \App\Models\Personnel $user */
+        $user = $request->user();
+
+        // User should be a Personnel model (teachers = personnel)
+        if (!$user || !$user instanceof Personnel) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Unable to verify personnel account.'],
+            ]);
+        }
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Your current password is incorrect.'],
+            ]);
+        }
+
+        if (Hash::check($request->new_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'new_password' => ['New password must be different from the current password.'],
+            ]);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return response()->json([
+            'message' => 'Password updated successfully.',
+        ]);
     }
 }
 

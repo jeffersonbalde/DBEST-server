@@ -33,6 +33,7 @@ class InventoryItem extends Model
         'warranty_expiry',
         'supplier',
         'notes',
+        'personnel_id',
     ];
 
     protected $appends = [

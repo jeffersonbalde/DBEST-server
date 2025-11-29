@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->prefix('property-custodian')->group(function 
 
     // Inventory Management
     Route::apiResource('inventory', InventoryController::class);
+    Route::post('inventory/{id}/generate-ics', [InventoryController::class, 'generateICS']);
     // Use a distinct prefix to avoid route-model binding conflicts with `inventory`
     // Register the list route BEFORE apiResource to avoid route conflicts
     Route::get('inventory-categories/list', [InventoryCategoryController::class, 'dropdown']);
@@ -85,10 +86,11 @@ Route::middleware('auth:sanctum')->prefix('property-custodian')->group(function 
 Route::middleware('auth:sanctum')->prefix('teacher')->group(function () {
     Route::get('user', [TeacherAuthController::class, 'user']);
     Route::post('logout', [TeacherAuthController::class, 'logout']);
+    Route::put('settings/change-password', [TeacherAuthController::class, 'changePassword']);
 
     // Manage Personnel Details (their own)
-    Route::get('personnel/me', [PersonnelController::class, 'show']);
-    Route::put('personnel/me', [PersonnelController::class, 'update']);
+    Route::get('personnel/{id}', [PersonnelController::class, 'show'])->where('id', 'me');
+    Route::match(['put', 'post'], 'personnel/{id}', [PersonnelController::class, 'update'])->where('id', 'me');
 
     // View Assigned Items
     Route::get('assigned-items', [AssignedItemController::class, 'index']);

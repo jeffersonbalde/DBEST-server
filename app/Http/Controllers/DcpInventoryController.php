@@ -13,8 +13,18 @@ class DcpInventoryController extends Controller
         $user = $request->user();
 
         $query = DcpInventoryItem::query()
-            ->where('school_id', $user->school_id)
             ->with(['package', 'personnel']);
+
+        // Filter by school_id if user has it (Property Custodian)
+        // For teachers/personnel, they can filter by personnel_id
+        if (isset($user->school_id)) {
+            $query->where('school_id', $user->school_id);
+        }
+
+        // Allow filtering by personnel_id for teachers
+        if ($request->filled('personnel_id')) {
+            $query->where('personnel_id', $request->integer('personnel_id'));
+        }
 
         if ($request->filled('dcp_package_id')) {
             $query->where('dcp_package_id', $request->integer('dcp_package_id'));
@@ -29,7 +39,10 @@ class DcpInventoryController extends Controller
                     ->orWhere('model', 'like', "%{$search}%")
                     ->orWhere('serial_number', 'like', "%{$search}%")
                     ->orWhere('property_no', 'like', "%{$search}%")
-                    ->orWhere('personnel_name', 'like', "%{$search}%");
+                    ->orWhereHas('personnel', function ($q) use ($search) {
+                        $q->where('first_name', 'like', "%{$search}%")
+                          ->orWhere('last_name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -95,7 +108,7 @@ class DcpInventoryController extends Controller
     {
         $rule = $isUpdate ? 'sometimes' : 'required';
 
-        return $request->validate([
+        $validated = $request->validate([
             'dcp_package_id' => [$rule, 'exists:dcp_packages,id'],
             'category' => [$rule, 'string', 'max:255'],
             'description' => [$rule, 'string'],
@@ -107,13 +120,18 @@ class DcpInventoryController extends Controller
             'quantity' => [$rule, 'integer', 'min:1'],
             'property_no' => [$rule, 'string', 'max:255'],
             'personnel_id' => [$rule, 'exists:personnel,id'],
-            'personnel_name' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'personnel_position' => ['sometimes', 'nullable', 'string', 'max:255'],
             'condition_status' => ['sometimes', 'nullable', 'string', 'max:255'],
             'last_checked_at' => ['sometimes', 'nullable', 'date'],
             'validation_status' => ['sometimes', 'nullable', 'string', 'max:255'],
             'remarks' => ['sometimes', 'nullable', 'string'],
         ]);
+
+        // Remove personnel_name and personnel_position - we only store personnel_id
+        // The name and position will be retrieved from the personnel relationship
+        unset($validated['personnel_name']);
+        unset($validated['personnel_position']);
+
+        return $validated;
     }
 }
 
