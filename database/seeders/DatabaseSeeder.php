@@ -38,13 +38,17 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Seed ICT menu items
+        // Seed all data in correct order
         $this->call([
-            SchoolSeeder::class,           // Seed schools first
-            PropertyCustodianSeeder::class, // Then property custodians (depends on schools)
-            AccountingSeeder::class,       // Finally accounting users
-            DcpPackageSeeder::class,       // Sample DCP packages per school
-            PersonnelSeeder::class,        // Sample personnel directory
+            SchoolSeeder::class,              // 1. Seed schools first
+            InventoryCategorySeeder::class,   // 2. Seed inventory categories
+            PropertyCustodianSeeder::class,   // 3. Property custodians (depends on schools)
+            AccountingSeeder::class,          // 4. Accounting users
+            TeacherSeeder::class,             // 5. Teacher users
+            PersonnelSeeder::class,           // 6. Personnel directory
+            InventorySeeder::class,           // 7. Inventory items (depends on categories)
+            AssignedItemSeeder::class,         // 8. Assigned items (depends on personnel, inventory, custodians)
+            DcpPackageSeeder::class,          // 9. DCP packages (depends on schools)
         ]);
     }
 }
