@@ -24,6 +24,9 @@ class Accounting extends Authenticatable
         'position',
         'avatar_path',
         'is_active',
+        'deactivation_reason',
+        'deactivated_by',
+        'deactivated_at',
     ];
 
     protected $hidden = [
@@ -37,6 +40,7 @@ class Accounting extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'deactivated_at' => 'datetime',
         ];
     }
 

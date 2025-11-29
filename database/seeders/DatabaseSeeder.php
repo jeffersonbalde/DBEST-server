@@ -43,6 +43,8 @@ class DatabaseSeeder extends Seeder
             SchoolSeeder::class,           // Seed schools first
             PropertyCustodianSeeder::class, // Then property custodians (depends on schools)
             AccountingSeeder::class,       // Finally accounting users
+            DcpPackageSeeder::class,       // Sample DCP packages per school
+            PersonnelSeeder::class,        // Sample personnel directory
         ]);
     }
 }

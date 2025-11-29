@@ -7,6 +7,7 @@ use App\Models\PropertyCustodian;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Storage;
 
 class PropertyCustodianAuthController extends Controller
 {
@@ -81,6 +82,90 @@ class PropertyCustodianAuthController extends Controller
     public function user(Request $request)
     {
         return response()->json($request->user());
+    }
+
+    public function updateProfile(Request $request)
+    {
+        /** @var \App\Models\PropertyCustodian $custodian */
+        $custodian = $request->user();
+
+        $data = $request->validate([
+            'username' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:255',
+                new \App\Rules\UniqueUsernameAcrossUsers(
+                    ['property_custodians', 'personnel', 'accountings'],
+                    'username',
+                    'property_custodians',
+                    (int) $custodian->id
+                ),
+            ],
+            'first_name' => ['sometimes', 'required', 'string', 'max:255'],
+            'last_name' => ['sometimes', 'required', 'string', 'max:255'],
+            'email' => ['sometimes', 'required', 'email', 'max:255', 'unique:property_custodians,email,' . $custodian->id],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'position' => ['sometimes', 'nullable', 'string', 'max:255'],
+        ]);
+
+        if ($request->hasFile('avatar')) {
+            $file = $request->file('avatar');
+
+            if ($custodian->avatar_path) {
+                $oldPath = $custodian->avatar_path;
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
+            }
+
+            $storedName = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('avatars', $storedName, 'public');
+            $data['avatar_path'] = $path;
+        } elseif ($request->boolean('remove_avatar')) {
+            if ($custodian->avatar_path && Storage::disk('public')->exists($custodian->avatar_path)) {
+                Storage::disk('public')->delete($custodian->avatar_path);
+            }
+            $data['avatar_path'] = null;
+        }
+
+        $custodian->update($data);
+
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user' => $custodian->fresh(),
+        ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        /** @var \App\Models\PropertyCustodian $custodian */
+        $custodian = $request->user();
+
+        $request->validate([
+            'current_password' => ['required', 'string'],
+            'new_password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        if (!Hash::check($request->current_password, $custodian->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Your current password is incorrect.'],
+            ]);
+        }
+
+        if (Hash::check($request->new_password, $custodian->password)) {
+            throw ValidationException::withMessages([
+                'new_password' => ['New password must be different from the current password.'],
+            ]);
+        }
+
+        $custodian->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return response()->json([
+            'message' => 'Password updated successfully.',
+        ]);
     }
 }
 

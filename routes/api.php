@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\PropertyCustodianAuthController;
 use App\Http\Controllers\Auth\TeacherAuthController;
 use App\Http\Controllers\Auth\IctAuthController;
 use App\Http\Controllers\Auth\AccountingAuthController;
+use App\Http\Controllers\InventoryCategoryController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\AssignedItemController;
 use App\Http\Controllers\PersonnelController;
@@ -15,6 +16,11 @@ use App\Http\Controllers\PropertyCustodianController;
 use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\SchoolController;
+use App\Http\Controllers\DcpPackageController;
+use App\Http\Controllers\PropertyCustodianDcpPackageController;
+use App\Http\Controllers\DcpInventoryController;
+use App\Http\Controllers\PropertyCustodianSchoolProfileController;
+use App\Models\DcpPackage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -34,20 +40,45 @@ Route::prefix('auth')->group(function () {
 Route::middleware('auth:sanctum')->prefix('property-custodian')->group(function () {
     Route::get('user', [PropertyCustodianAuthController::class, 'user']);
     Route::post('logout', [PropertyCustodianAuthController::class, 'logout']);
+    Route::post('profile', [PropertyCustodianAuthController::class, 'updateProfile']);
+    Route::put('settings/change-password', [PropertyCustodianAuthController::class, 'changePassword']);
 
     // Inventory Management
     Route::apiResource('inventory', InventoryController::class);
-    Route::get('inventory/categories/list', [InventoryController::class, 'getCategories']);
+    // Use a distinct prefix to avoid route-model binding conflicts with `inventory`
+    // Register the list route BEFORE apiResource to avoid route conflicts
+    Route::get('inventory-categories/list', [InventoryCategoryController::class, 'dropdown']);
+    Route::apiResource('inventory-categories', InventoryCategoryController::class);
 
     // Assigned Items
     Route::apiResource('assigned-items', AssignedItemController::class);
 
     // Personnel Management
     Route::apiResource('personnel', PersonnelController::class);
+    Route::patch('personnel/{id}/activate', [PersonnelController::class, 'activate']);
+    Route::patch('personnel/{id}/deactivate', [PersonnelController::class, 'deactivate']);
 
     // Reports
     Route::apiResource('reports', InventoryReportController::class);
     Route::post('reports/generate', [InventoryReportController::class, 'generate']);
+
+    // DCP Packages (per school visibility)
+    Route::get('dcp-packages', [PropertyCustodianDcpPackageController::class, 'index']);
+    Route::put('dcp-packages/{dcpPackage}', [PropertyCustodianDcpPackageController::class, 'update']);
+
+    // DCP Inventory (per school visibility)
+    Route::apiResource('dcp-inventory', DcpInventoryController::class)
+        ->parameters(['dcp-inventory' => 'dcpInventoryItem'])
+        ->only([
+            'index',
+            'store',
+            'update',
+            'destroy',
+        ]);
+
+    // School Profile (linked to the property custodian's assigned school)
+    Route::get('school-profile', [PropertyCustodianSchoolProfileController::class, 'show']);
+    Route::post('school-profile', [PropertyCustodianSchoolProfileController::class, 'update']);
 });
 
 // Teacher Routes
@@ -89,6 +120,9 @@ Route::middleware('auth:sanctum')->prefix('ict')->group(function () {
 
     // DepEd Schools Registry
     Route::apiResource('schools', SchoolController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    // DCP Packages
+    Route::apiResource('dcp-packages', DcpPackageController::class);
 });
 
 Route::middleware('auth:sanctum')->prefix('backup')->group(function () {
@@ -176,6 +210,83 @@ Route::get('/accounting-avatar/{filename}', function ($filename) {
 
     return response($file, 200)
         ->header('Content-Type', $mimeType)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Cross-Origin-Resource-Policy', 'cross-origin');
+});
+
+// Personnel Avatar Route
+Route::get('/personnel-avatar/{filename}', function ($filename) {
+    $cleanFilename = str_replace('personnel-avatars/', '', $filename);
+    $path = 'personnel-avatars/' . $cleanFilename;
+
+    if (!Storage::disk('public')->exists($path)) {
+        Log::error("Personnel avatar not found: " . $path);
+        abort(404);
+    }
+
+    $file = Storage::disk('public')->get($path);
+    $mimeType = mime_content_type(storage_path('app/public/' . $path));
+
+    return response($file, 200)
+        ->header('Content-Type', $mimeType)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Cross-Origin-Resource-Policy', 'cross-origin');
+});
+
+// Inventory Asset Image Route
+Route::get('/inventory-asset/{filename}', function ($filename) {
+    $cleanFilename = str_replace('inventory-assets/', '', $filename);
+    $path = 'inventory-assets/' . $cleanFilename;
+
+    if (!Storage::disk('public')->exists($path)) {
+        Log::error("Inventory asset image not found: " . $path);
+        abort(404);
+    }
+
+    $file = Storage::disk('public')->get($path);
+    $mimeType = mime_content_type(storage_path('app/public/' . $path));
+
+    return response($file, 200)
+        ->header('Content-Type', $mimeType)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Cross-Origin-Resource-Policy', 'cross-origin');
+});
+
+// DCP Package document download route
+Route::get('/dcp-package-file/{dcpPackage}/{type}', function (DcpPackage $dcpPackage, string $type) {
+    $type = strtolower($type);
+    if (!in_array($type, ['dr', 'ptr', 'iar'], true)) {
+        abort(404);
+    }
+
+    $filenameField = "{$type}_filename";
+    $filename = $dcpPackage->{$filenameField};
+
+    if (!$filename) {
+        Log::warning("DCP document missing filename", [
+            'package_id' => $dcpPackage->id,
+            'type' => $type,
+        ]);
+        abort(404);
+    }
+
+    $path = "dcp-documents/{$type}/{$filename}";
+
+    if (!Storage::disk('public')->exists($path)) {
+        Log::error("DCP document not found", [
+            'package_id' => $dcpPackage->id,
+            'type' => $type,
+            'path' => $path,
+        ]);
+        abort(404);
+    }
+
+    $file = Storage::disk('public')->get($path);
+    $mimeType = mime_content_type(storage_path('app/public/' . $path));
+
+    return response($file, 200)
+        ->header('Content-Type', $mimeType)
+        ->header('Content-Disposition', 'attachment; filename="'.$filename.'"')
         ->header('Access-Control-Allow-Origin', '*')
         ->header('Cross-Origin-Resource-Policy', 'cross-origin');
 });

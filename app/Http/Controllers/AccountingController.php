@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Rules\UniqueUsernameAcrossUsers;
 
 class AccountingController extends Controller
 {
@@ -44,7 +45,12 @@ class AccountingController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'username' => 'required|string|max:255|unique:accountings,username',
+            'username' => [
+                'required',
+                'string',
+                'max:255',
+                new UniqueUsernameAcrossUsers(['accountings', 'property_custodians', 'personnel']),
+            ],
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'nullable|email|unique:accountings,email',
@@ -80,7 +86,17 @@ class AccountingController extends Controller
         $accounting = Accounting::findOrFail($id);
 
         $validated = $request->validate([
-            'username' => 'sometimes|string|max:255|unique:accountings,username,' . $id,
+            'username' => [
+                'sometimes',
+                'string',
+                'max:255',
+                new UniqueUsernameAcrossUsers(
+                    ['accountings', 'property_custodians', 'personnel'],
+                    'username',
+                    'accountings',
+                    (int) $id
+                ),
+            ],
             'first_name' => 'sometimes|string|max:255',
             'last_name' => 'sometimes|string|max:255',
             'email' => 'nullable|email|unique:accountings,email,' . $id,
@@ -122,7 +138,12 @@ class AccountingController extends Controller
     public function activate($id)
     {
         $accounting = Accounting::findOrFail($id);
-        $accounting->update(['is_active' => true]);
+        $accounting->update([
+            'is_active' => true,
+            'deactivation_reason' => null,
+            'deactivated_by' => null,
+            'deactivated_at' => null,
+        ]);
 
         return response()->json([
             'message' => 'Accounting user activated successfully',
@@ -133,11 +154,16 @@ class AccountingController extends Controller
     public function deactivate(Request $request, $id)
     {
         $request->validate([
-            'deactivate_reason' => 'nullable|string|max:500',
+            'deactivate_reason' => 'required|string|max:500',
         ]);
 
         $accounting = Accounting::findOrFail($id);
-        $accounting->update(['is_active' => false]);
+        $accounting->update([
+            'is_active' => false,
+            'deactivation_reason' => $request->input('deactivate_reason'),
+            'deactivated_by' => optional($request->user())->full_name ?? 'System',
+            'deactivated_at' => now(),
+        ]);
 
         return response()->json([
             'message' => 'Accounting user deactivated successfully',
@@ -162,6 +188,9 @@ class AccountingController extends Controller
             'avatar_url' => $accounting->avatar_path ? asset('storage/' . $accounting->avatar_path) : null,
             'created_at' => $accounting->created_at,
             'updated_at' => $accounting->updated_at,
+            'deactivation_reason' => $accounting->deactivation_reason,
+            'deactivated_by' => $accounting->deactivated_by,
+            'deactivated_at' => $accounting->deactivated_at,
         ];
     }
 }

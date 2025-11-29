@@ -22,6 +22,9 @@ class Ict extends Authenticatable
         'phone',
         'position',
         'is_active',
+        'deactivation_reason',
+        'deactivated_by',
+        'deactivated_at',
     ];
 
     protected $hidden = [
@@ -35,6 +38,7 @@ class Ict extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'deactivated_at' => 'datetime',
         ];
     }
 

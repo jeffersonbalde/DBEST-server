@@ -48,5 +48,10 @@ class School extends Model
     {
         return $this->hasMany(PropertyCustodian::class);
     }
+
+    public function dcpPackages()
+    {
+        return $this->hasMany(DcpPackage::class);
+    }
 }
 

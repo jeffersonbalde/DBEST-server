@@ -117,7 +117,12 @@ class PropertyCustodianController extends Controller
     public function activate($id)
     {
         $custodian = PropertyCustodian::findOrFail($id);
-        $custodian->update(['is_active' => true]);
+        $custodian->update([
+            'is_active' => true,
+            'deactivation_reason' => null,
+            'deactivated_by' => null,
+            'deactivated_at' => null,
+        ]);
 
         return response()->json([
             'message' => 'Property custodian activated successfully',
@@ -128,11 +133,16 @@ class PropertyCustodianController extends Controller
     public function deactivate(Request $request, $id)
     {
         $request->validate([
-            'deactivate_reason' => 'nullable|string|max:500',
+            'deactivate_reason' => 'required|string|max:500',
         ]);
 
         $custodian = PropertyCustodian::findOrFail($id);
-        $custodian->update(['is_active' => false]);
+        $custodian->update([
+            'is_active' => false,
+            'deactivation_reason' => $request->input('deactivate_reason'),
+            'deactivated_by' => optional($request->user())->full_name ?? 'System',
+            'deactivated_at' => now(),
+        ]);
 
         return response()->json([
             'message' => 'Property custodian deactivated successfully',
@@ -158,6 +168,9 @@ class PropertyCustodianController extends Controller
             'avatar_url' => $custodian->avatar_path ? asset('storage/' . $custodian->avatar_path) : null,
             'created_at' => $custodian->created_at,
             'updated_at' => $custodian->updated_at,
+            'deactivation_reason' => $custodian->deactivation_reason,
+            'deactivated_by' => $custodian->deactivated_by,
+            'deactivated_at' => $custodian->deactivated_at,
         ];
     }
 }

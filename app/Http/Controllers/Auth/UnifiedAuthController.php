@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\PropertyCustodian;
+use App\Models\Personnel;
 use App\Models\Teacher;
 use App\Models\Ict;
 use App\Models\Accounting;
@@ -45,9 +46,14 @@ class UnifiedAuthController extends Controller
 
             if ($user && Hash::check($request->password, $user->password)) {
                 if (!$user->is_active) {
-                    throw ValidationException::withMessages([
-                        'username' => ['Your account has been deactivated.'],
-                    ]);
+                    return response()->json([
+                        'message' => 'Your account has been deactivated.',
+                        'deactivation' => [
+                            'reason' => $user->deactivation_reason ?? 'No reason was provided.',
+                            'deactivated_at' => $user->deactivated_at,
+                            'deactivated_by' => $user->deactivated_by,
+                        ],
+                    ], 423);
                 }
 
                 $token = $user->createToken("{$userType}-token")->plainTextToken;
@@ -58,6 +64,38 @@ class UnifiedAuthController extends Controller
                     'user_type' => $userType,
                 ]);
             }
+        }
+
+        // Check Personnel table (Personnel and Teacher are the same term)
+        // Personnel users will be treated as Teachers and routed to /faculty
+        $personnelQuery = Personnel::query();
+        $personnelQuery->where(function ($q) use ($request) {
+            $q->where('username', $request->username)
+              ->orWhere('employee_id', $request->username);
+        });
+
+        $personnel = $personnelQuery->first();
+
+        if ($personnel && Hash::check($request->password, $personnel->password)) {
+            if (!$personnel->is_active) {
+                return response()->json([
+                    'message' => 'Your account has been deactivated.',
+                    'deactivation' => [
+                        'reason' => $personnel->deactivation_reason ?? 'No reason was provided.',
+                        'deactivated_at' => $personnel->deactivated_at,
+                        'deactivated_by' => $personnel->deactivated_by,
+                    ],
+                ], 423);
+            }
+
+            // Return 'teacher' as user_type so Personnel users are routed to /faculty
+            $token = $personnel->createToken("teacher-token")->plainTextToken;
+
+            return response()->json([
+                'user' => $personnel,
+                'token' => $token,
+                'user_type' => 'teacher', // Personnel users use Teacher routes
+            ]);
         }
 
         // If no user found in any table
