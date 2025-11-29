@@ -17,13 +17,13 @@ class AccountingController extends Controller
 
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('username', 'like', "%{$search}%")
-                  ->orWhere('employee_id', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('employee_id', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -74,49 +74,104 @@ class AccountingController extends Controller
         ], 201);
     }
 
-    public function show($id)
+    public function show(Request $request, $id = null)
     {
+        // Handle "me" route for authenticated Accounting users
+        // When called from profile/me route, $id will be null
+        if ($id === null || $id === 'me') {
+            $user = $request->user();
+
+            // User should be an Accounting model
+            if ($user instanceof Accounting) {
+                $accounting = Accounting::findOrFail($user->id);
+                return response()->json(['accounting' => $this->transformAccounting($accounting)]);
+            }
+
+            return response()->json(['message' => 'Accounting record not found'], 404);
+        }
+
         $accounting = Accounting::findOrFail($id);
-        
         return response()->json($this->transformAccounting($accounting));
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id = null)
     {
-        $accounting = Accounting::findOrFail($id);
+        // Handle "me" route for authenticated Accounting users
+        // When called from profile/me route, $id will be null
+        if ($id === null || $id === 'me') {
+            $user = $request->user();
 
-        $validated = $request->validate([
-            'username' => [
-                'sometimes',
-                'string',
-                'max:255',
-                new UniqueUsernameAcrossUsers(
-                    ['accountings', 'property_custodians', 'personnel'],
-                    'username',
-                    'accountings',
-                    (int) $id
-                ),
-            ],
+            // User should be an Accounting model
+            if ($user instanceof Accounting) {
+                $accounting = Accounting::findOrFail($user->id);
+                $accountingId = $accounting->id;
+            } else {
+                return response()->json(['message' => 'Accounting record not found'], 404);
+            }
+        } else {
+            $accounting = Accounting::findOrFail($id);
+            $accountingId = $accounting->id;
+        }
+
+        // For "me" route, only allow updating first_name, last_name, phone, and avatar
+        // For admin route (ICT), allow all fields
+        $validationRules = [
             'first_name' => 'sometimes|string|max:255',
             'last_name' => 'sometimes|string|max:255',
-            'email' => 'nullable|email|unique:accountings,email,' . $id,
-            'password' => 'sometimes|string|min:8|confirmed',
             'phone' => 'nullable|string|max:20',
-            'is_active' => 'sometimes|boolean',
-        ]);
+            'avatar' => 'nullable|image|max:2048',
+            'remove_avatar' => 'nullable|boolean',
+        ];
+
+        // Only allow email and position updates for admin routes (not for "me")
+        if ($id !== null && $id !== 'me') {
+            $validationRules['email'] = 'nullable|email|unique:accountings,email,' . $accountingId;
+            $validationRules['position'] = 'nullable|string|max:255';
+        }
+
+        $validated = $request->validate($validationRules);
+
+        // Filter out empty strings and convert them to null for nullable fields
+        $updateData = [];
+        foreach ($validated as $key => $value) {
+            // Skip fields that shouldn't be updated by the user themselves
+            if (in_array($key, ['avatar', 'remove_avatar'])) {
+                if (isset($validated[$key])) {
+                    $updateData[$key] = $validated[$key];
+                }
+                continue;
+            }
+
+            // Convert empty strings to null for nullable fields
+            if ($value === '' || $value === null) {
+                $updateData[$key] = null;
+            } else {
+                $updateData[$key] = $value;
+            }
+        }
+
+        if ($request->boolean('remove_avatar') && $accounting->avatar_path) {
+            Storage::disk('public')->delete($accounting->avatar_path);
+            $updateData['avatar_path'] = null;
+        }
 
         if ($request->hasFile('avatar')) {
             if ($accounting->avatar_path) {
                 Storage::disk('public')->delete($accounting->avatar_path);
             }
-            $validated['avatar_path'] = $request->file('avatar')->store('avatars', 'public');
+            $updateData['avatar_path'] = $request->file('avatar')->store('avatars', 'public');
         }
 
-        if (isset($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
+        // Only update if there's data to update
+        if (!empty($updateData)) {
+            $accounting->update($updateData);
+            $accounting->refresh();
         }
 
-        $accounting->update($validated);
+        // Return in consistent format for 'me' route
+        if ($id === null || $id === 'me') {
+            return response()->json(['accounting' => $this->transformAccounting($accounting)]);
+        }
 
         return response()->json([
             'message' => 'Accounting user updated successfully',
@@ -194,4 +249,3 @@ class AccountingController extends Controller
         ];
     }
 }
-

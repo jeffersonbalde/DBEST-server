@@ -138,6 +138,11 @@ Route::middleware('auth:sanctum')->prefix('backup')->group(function () {
 Route::middleware('auth:sanctum')->prefix('accounting')->group(function () {
     Route::get('user', [AccountingAuthController::class, 'user']);
     Route::post('logout', [AccountingAuthController::class, 'logout']);
+    Route::put('settings/change-password', [AccountingAuthController::class, 'changePassword']);
+
+    // Manage Accounting Profile (their own)
+    Route::get('profile/me', [AccountingController::class, 'show']);
+    Route::match(['put', 'post'], 'profile/me', [AccountingController::class, 'update']);
 
     // View Inventory Analytics
     Route::get('analytics', [AnalyticsController::class, 'getInventoryAnalytics']);
@@ -288,7 +293,7 @@ Route::get('/dcp-package-file/{dcpPackage}/{type}', function (DcpPackage $dcpPac
 
     return response($file, 200)
         ->header('Content-Type', $mimeType)
-        ->header('Content-Disposition', 'attachment; filename="'.$filename.'"')
+        ->header('Content-Disposition', 'attachment; filename="' . $filename . '"')
         ->header('Access-Control-Allow-Origin', '*')
         ->header('Cross-Origin-Resource-Policy', 'cross-origin');
 });

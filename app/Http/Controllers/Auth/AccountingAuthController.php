@@ -82,5 +82,36 @@ class AccountingAuthController extends Controller
     {
         return response()->json($request->user());
     }
+
+    public function changePassword(Request $request)
+    {
+        /** @var \App\Models\Accounting $accounting */
+        $accounting = $request->user();
+
+        $request->validate([
+            'current_password' => ['required', 'string'],
+            'new_password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        if (!Hash::check($request->current_password, $accounting->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Your current password is incorrect.'],
+            ]);
+        }
+
+        if (Hash::check($request->new_password, $accounting->password)) {
+            throw ValidationException::withMessages([
+                'new_password' => ['New password must be different from the current password.'],
+            ]);
+        }
+
+        $accounting->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return response()->json([
+            'message' => 'Password updated successfully.',
+        ]);
+    }
 }
 

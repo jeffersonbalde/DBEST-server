@@ -47,8 +47,9 @@ class DatabaseSeeder extends Seeder
             TeacherSeeder::class,             // 5. Teacher users
             PersonnelSeeder::class,           // 6. Personnel directory
             InventorySeeder::class,           // 7. Inventory items (depends on categories)
-            AssignedItemSeeder::class,         // 8. Assigned items (depends on personnel, inventory, custodians)
-            DcpPackageSeeder::class,          // 9. DCP packages (depends on schools)
+            AssignedItemSeeder::class,        // 8. Assigned items (depends on personnel, inventory, custodians)
+            DcpPackageSeeder::class,         // 9. DCP packages (depends on schools)
+            DcpInventoryItemSeeder::class,    // 10. DCP inventory items (depends on packages, schools, personnel)
         ]);
     }
 }

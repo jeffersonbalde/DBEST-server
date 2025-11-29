@@ -16,8 +16,7 @@ class AssignedItemSeeder extends Seeder
     public function run(): void
     {
         $personnel = Personnel::where('is_active', true)->get();
-        $inventoryItems = InventoryItem::where('status', 'available')
-            ->orWhere('status', 'assigned')
+        $inventoryItems = InventoryItem::where('status', 'SERVICEABLE')
             ->get();
         $propertyCustodians = PropertyCustodian::where('is_active', true)->get();
 
@@ -38,15 +37,20 @@ class AssignedItemSeeder extends Seeder
         // Assign items to personnel
         $assignedCount = 0;
         $maxAssignments = min(15, $inventoryItems->count(), $personnel->count() * 2);
+        
+        // Only assign items that have available quantity > 0
+        $assignableItems = $inventoryItems->filter(function ($item) {
+            return $item->available_quantity > 0;
+        })->take($maxAssignments);
 
-        foreach ($inventoryItems->take($maxAssignments) as $item) {
+        foreach ($assignableItems as $item) {
             $person = $personnel->random();
             $custodian = $propertyCustodians->random();
             $status = $statuses[array_rand($statuses)];
             $assignedDate = now()->subDays(rand(1, 180));
             $returnDate = $status === 'returned' ? $assignedDate->copy()->addDays(rand(30, 120)) : null;
 
-            AssignedItem::firstOrCreate(
+            $assignedItem = AssignedItem::firstOrCreate(
                 [
                     'inventory_item_id' => $item->id,
                     'personnel_id' => $person->id,
@@ -62,9 +66,8 @@ class AssignedItemSeeder extends Seeder
                 ]
             );
 
-            // Update inventory item status if assigned
-            if ($status === 'active' && $item->status === 'available') {
-                $item->update(['status' => 'assigned']);
+            // Update inventory item available quantity if assigned and active
+            if ($status === 'active' && $item->status === 'SERVICEABLE' && $item->available_quantity > 0) {
                 $item->decrement('available_quantity');
             }
 

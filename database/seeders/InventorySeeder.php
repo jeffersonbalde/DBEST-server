@@ -16,6 +16,9 @@ class InventorySeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function () {
+            // Status distribution for variety
+            $statusOptions = ['SERVICEABLE', 'SERVICEABLE', 'SERVICEABLE', 'SERVICEABLE', 'NEEDS REPAIR', 'UNSERVICEABLE', 'MISSING/LOST'];
+            
             $items = [
                 [
                     'item_code' => 'INV-LAP-001',
@@ -30,7 +33,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 8,
                     'unit_of_measure' => 'pcs',
                     'location' => 'ICT Stockroom',
-                    'status' => 'available',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(10),
                     'warranty_expiry' => now()->addMonths(14),
                     'supplier' => 'Dell Technologies PH',
@@ -49,7 +53,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 4,
                     'unit_of_measure' => 'sets',
                     'location' => 'Admin Office',
-                    'status' => 'assigned',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subYear(),
                     'warranty_expiry' => now()->addMonths(9),
                     'supplier' => 'Acer Philippines',
@@ -68,7 +73,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 3,
                     'unit_of_measure' => 'pcs',
                     'location' => 'Library AV Cabinet',
-                    'status' => 'available',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(6),
                     'warranty_expiry' => now()->addMonths(18),
                     'supplier' => 'Epson Philippines',
@@ -87,7 +93,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 5,
                     'unit_of_measure' => 'sets',
                     'location' => 'AV Room',
-                    'status' => 'available',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(4),
                     'warranty_expiry' => now()->addMonths(20),
                     'supplier' => 'Thinking Tools',
@@ -106,7 +113,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 7,
                     'unit_of_measure' => 'kits',
                     'location' => 'ICT Storage',
-                    'status' => 'available',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(3),
                     'warranty_expiry' => now()->addMonths(21),
                     'supplier' => 'PC Express',
@@ -125,7 +133,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 1,
                     'unit_of_measure' => 'pcs',
                     'location' => 'Server Rack',
-                    'status' => 'maintenance',
+                    'status' => 'NEEDS REPAIR',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(8),
                     'warranty_expiry' => now()->addMonths(16),
                     'supplier' => 'Cisco Partner PH',
@@ -144,7 +153,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 6,
                     'unit_of_measure' => 'pcs',
                     'location' => 'ICT Stockroom',
-                    'status' => 'available',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(5),
                     'warranty_expiry' => now()->addMonths(19),
                     'supplier' => 'HP Philippines',
@@ -163,11 +173,12 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 2,
                     'unit_of_measure' => 'pcs',
                     'location' => 'Admin Office',
-                    'status' => 'available',
+                    'status' => 'NEEDS REPAIR',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(7),
                     'warranty_expiry' => now()->addMonths(17),
                     'supplier' => 'Canon Philippines',
-                    'notes' => 'Eco-friendly, cost-effective printing.',
+                    'notes' => 'Printer head needs cleaning.',
                 ],
                 [
                     'item_code' => 'INV-TAB-009',
@@ -182,7 +193,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 10,
                     'unit_of_measure' => 'pcs',
                     'location' => 'ICT Lab',
-                    'status' => 'available',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(2),
                     'warranty_expiry' => now()->addMonths(22),
                     'supplier' => 'Samsung Philippines',
@@ -201,7 +213,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 12,
                     'unit_of_measure' => 'pcs',
                     'location' => 'ICT Storage',
-                    'status' => 'available',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(4),
                     'warranty_expiry' => now()->addMonths(20),
                     'supplier' => 'LG Electronics PH',
@@ -220,7 +233,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 18,
                     'unit_of_measure' => 'sets',
                     'location' => 'ICT Storage',
-                    'status' => 'available',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(3),
                     'warranty_expiry' => now()->addMonths(21),
                     'supplier' => 'PC Express',
@@ -239,7 +253,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 2,
                     'unit_of_measure' => 'pcs',
                     'location' => 'AV Room',
-                    'status' => 'available',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(6),
                     'warranty_expiry' => now()->addMonths(18),
                     'supplier' => 'BenQ Philippines',
@@ -258,7 +273,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 5,
                     'unit_of_measure' => 'pcs',
                     'location' => 'AV Room',
-                    'status' => 'available',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(2),
                     'warranty_expiry' => now()->addMonths(22),
                     'supplier' => 'JBL Philippines',
@@ -277,7 +293,8 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 6,
                     'unit_of_measure' => 'pcs',
                     'location' => 'ICT Storage',
-                    'status' => 'available',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(5),
                     'warranty_expiry' => now()->addMonths(19),
                     'supplier' => 'TP-Link Philippines',
@@ -296,28 +313,89 @@ class InventorySeeder extends Seeder
                     'available_quantity' => 3,
                     'unit_of_measure' => 'pcs',
                     'location' => 'ICT Lab',
-                    'status' => 'assigned',
+                    'status' => 'SERVICEABLE',
+                    'tracking_mode' => 'detailed',
                     'purchase_date' => now()->subMonths(9),
                     'warranty_expiry' => now()->addMonths(15),
                     'supplier' => 'Dell Technologies PH',
                     'notes' => 'For computer lab stations.',
+                ],
+                [
+                    'item_code' => 'INV-LAP-016',
+                    'name' => 'Acer Aspire 5',
+                    'description' => '15.6" laptop - damaged screen',
+                    'category' => 'Laptops',
+                    'brand' => 'Acer',
+                    'model' => 'Aspire 5 A515-56',
+                    'serial_number' => Str::upper(Str::random(10)),
+                    'unit_price' => 35000,
+                    'quantity' => 1,
+                    'available_quantity' => 0,
+                    'unit_of_measure' => 'pcs',
+                    'location' => 'Repair Shop',
+                    'status' => 'UNSERVICEABLE',
+                    'tracking_mode' => 'detailed',
+                    'purchase_date' => now()->subMonths(12),
+                    'warranty_expiry' => now()->addMonths(12),
+                    'supplier' => 'Acer Philippines',
+                    'notes' => 'Screen cracked, beyond repair.',
+                ],
+                [
+                    'item_code' => 'INV-TAB-017',
+                    'name' => 'iPad Air 4th Gen',
+                    'description' => '10.9" tablet - missing',
+                    'category' => 'Tablets',
+                    'brand' => 'Apple',
+                    'model' => 'iPad Air 4',
+                    'serial_number' => Str::upper(Str::random(10)),
+                    'unit_price' => 35000,
+                    'quantity' => 1,
+                    'available_quantity' => 0,
+                    'unit_of_measure' => 'pcs',
+                    'location' => 'Unknown',
+                    'status' => 'MISSING/LOST',
+                    'tracking_mode' => 'detailed',
+                    'purchase_date' => now()->subMonths(8),
+                    'warranty_expiry' => now()->addMonths(16),
+                    'supplier' => 'Apple Philippines',
+                    'notes' => 'Reported missing during inventory check.',
                 ],
             ];
 
             // Get categories from database (should be seeded by InventoryCategorySeeder)
             $categories = InventoryCategory::all()->keyBy('name');
 
-            foreach ($items as $item) {
-                $category = $categories->get($item['category']);
-                $item['category_id'] = $category?->id;
-                $item['tracking_mode'] = 'detailed';
-                $item['image_path'] = null;
+            foreach ($items as $itemData) {
+                $categoryName = $itemData['category'];
+                $category = $categories->get($categoryName);
+                
+                if (!$category) {
+                    $this->command->warn("Category '{$categoryName}' not found. Skipping item {$itemData['item_code']}.");
+                    continue;
+                }
+                
+                // Set both category_id (foreign key) and category (string for display/backward compatibility)
+                $itemData['category_id'] = $category->id;
+                $itemData['category'] = $category->name; // Ensure category string matches the category name
+                $itemData['image_path'] = null;
+                
+                // Ensure tracking_mode is set (already set in array, but ensure it's there)
+                if (!isset($itemData['tracking_mode'])) {
+                    $itemData['tracking_mode'] = 'detailed';
+                }
+                
+                // Ensure status is one of the new values
+                if (!in_array($itemData['status'], ['SERVICEABLE', 'UNSERVICEABLE', 'NEEDS REPAIR', 'MISSING/LOST'])) {
+                    $itemData['status'] = 'SERVICEABLE'; // Default to SERVICEABLE if invalid
+                }
 
                 InventoryItem::updateOrCreate(
-                    ['item_code' => $item['item_code']],
-                    $item
+                    ['item_code' => $itemData['item_code']],
+                    $itemData
                 );
             }
+            
+            $this->command->info('Inventory items seeded successfully with new status values!');
         });
     }
 }

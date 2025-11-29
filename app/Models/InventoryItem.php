@@ -65,6 +65,11 @@ class InventoryItem extends Model
         return $this->hasMany(AssignedItem::class);
     }
 
+    public function personnel()
+    {
+        return $this->belongsTo(Personnel::class, 'personnel_id');
+    }
+
     public function getTotalValueAttribute()
     {
         return $this->quantity * $this->unit_price;
